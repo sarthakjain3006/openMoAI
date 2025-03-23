@@ -1,0 +1,7 @@
+A UI that shows 
+
+- a collection of AI models
+- responses from each
+- choose between a verifier model or a response
+
+continue thread 
