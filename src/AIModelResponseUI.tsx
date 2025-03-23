@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import AIResponses from './AIResponses';
 
 const AIModelResponseUI = () => {
-  // Sample data - models and their responses
   const [models, setModels] = useState([
     { id: 1, name: "Claude 3.5 Sonnet", enabled: true },
     { id: 2, name: "Claude 3 Opus", enabled: true },
@@ -25,28 +25,48 @@ const AIModelResponseUI = () => {
       modelId: 3, 
       text: "This problem can be solved efficiently using a greedy algorithm. We can start by sorting the input array and then iterate through it once.",
       timestamp: "2025-03-23T10:16:01" 
+    },
+    { 
+      modelId: 4, 
+      text: "I suggest using a neural network to solve this problem. The model can be trained on a dataset of similar problems to learn the optimal solution.",
+      timestamp: "2025-03-23T10:16:15" 
+    },
+    { 
+      modelId: 5, 
+      text: "I recommend using a reinforcement learning approach for this problem. The agent can learn the optimal policy through trial and error.",
+      timestamp: "2025-03-23T10:16:30" 
     }
   ]);
 
   const [useVerifier, setUseVerifier] = useState(false);
-  const [selectedResponse, setSelectedResponse] = useState(null);
+  const [selectedResponse, setSelectedResponse] = useState<number | null>(null);
   const [prompt, setPrompt] = useState("What's the best algorithm to solve this optimization problem?");
+  const [collapsedResponses, setCollapsedResponses] = useState<number[]>([]);
 
   // Toggle model enabled status
-  const toggleModel = (modelId) => {
+  const toggleModel = (modelId: number) => {
     setModels(models.map(model => 
       model.id === modelId ? {...model, enabled: !model.enabled} : model
     ));
   };
 
   // Select a response
-  const selectResponse = (modelId) => {
+  const selectResponse = (modelId: number) => {
     setSelectedResponse(modelId);
   };
 
   // Toggle between verifier and direct response
   const toggleVerifier = () => {
     setUseVerifier(!useVerifier);
+  };
+
+  // Toggle collapse for a response
+  const toggleCollapse = (modelId: number) => {
+    setCollapsedResponses(prev =>
+      prev.includes(modelId)
+        ? prev.filter(id => id !== modelId)
+        : [...prev, modelId]
+    );
   };
 
   return (
@@ -56,27 +76,22 @@ const AIModelResponseUI = () => {
         <h1 className="text-xl font-bold text-gray-800 mb-4">AI Models</h1>
         
         {/* Model list */}
-        <div className="flex-grow overflow-auto">
-          <div className="space-y-2">
-            {models.map(model => (
-              <div 
-                key={model.id}
-                className="flex items-center justify-between p-2 rounded hover:bg-gray-50"
+        <div className="flex-grow overflow-auto space-y-2">
+          {models.map(model => (
+            <div key={model.id} className="p-2 flex items-center justify-between border rounded">
+              <span className={`text-sm ${model.enabled ? 'text-gray-800' : 'text-gray-500'}`}>
+                {model.name}
+              </span>
+              <button
+                className={`px-2 py-1 text-sm rounded ${
+                  model.enabled ? "bg-blue-500 text-white" : "bg-gray-300 text-gray-700"
+                }`}
+                onClick={() => toggleModel(model.id)}
               >
-                <span className={`text-sm ${model.enabled ? 'text-gray-800' : 'text-gray-500'}`}>
-                  {model.name}
-                </span>
-                <button
-                  onClick={() => toggleModel(model.id)}
-                  className={`w-8 h-5 flex items-center rounded-full p-1 transition-colors duration-200 ease-in-out ${
-                    model.enabled ? 'bg-blue-600 justify-end' : 'bg-gray-300 justify-start'
-                  }`}
-                >
-                  <span className="w-3 h-3 bg-white rounded-full" />
-                </button>
-              </div>
-            ))}
-          </div>
+                {model.enabled ? "Disable" : "Enable"}
+              </button>
+            </div>
+          ))}
         </div>
         
         {/* Verifier toggle */}
@@ -86,7 +101,7 @@ const AIModelResponseUI = () => {
               type="checkbox" 
               checked={useVerifier} 
               onChange={toggleVerifier}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="form-checkbox"
             />
             <span className="ml-2 text-sm text-gray-700">Use verifier model</span>
           </label>
@@ -98,61 +113,27 @@ const AIModelResponseUI = () => {
         {/* Header with prompt input */}
         <div className="bg-white border-b border-gray-200 p-4">
           <h1 className="text-xl font-bold text-gray-800 mb-3">AI Model Comparison</h1>
-          <div className="flex">
+            <div className="flex">
             <input 
-              type="text" 
               value={prompt} 
-              onChange={(e) => setPrompt(e.target.value)}
-              className="flex-grow p-2 border border-gray-300 rounded-l shadow-sm"
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPrompt(e.target.value)}
               placeholder="Enter your prompt here..."
+              className="flex-grow border rounded px-3 py-2 text-sm"
             />
-            <button className="bg-blue-600 text-white px-4 py-2 rounded-r">
-              Ask
-            </button>
-          </div>
+            <button className="ml-2 px-4 py-2 bg-blue-500 text-white rounded">Ask</button>
+            </div>
         </div>
         
         {/* Responses */}
-        <div className="flex-1 overflow-auto p-4">
-          <div className="space-y-4">
-            {responses.filter(response => 
+        <div className="flex-1 overflow-auto p-4 space-y-4">
+          <AIResponses
+            responses={responses.filter(response =>
               models.find(m => m.id === response.modelId)?.enabled
-            ).map(response => {
-              const model = models.find(m => m.id === response.modelId);
-              return (
-                <div 
-                  key={response.modelId}
-                  onClick={() => selectResponse(response.modelId)}
-                  className={`p-4 rounded border ${
-                    selectedResponse === response.modelId 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : 'border-gray-200 hover:border-gray-300 bg-white'
-                  } cursor-pointer`}
-                >
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="font-medium text-gray-800">{model?.name}</h3>
-                    <span className="text-xs text-gray-500">
-                      {new Date(response.timestamp).toLocaleTimeString()}
-                    </span>
-                  </div>
-                  <p className="text-gray-700">{response.text}</p>
-                  
-                  {/* Selection controls */}
-                  <div className="mt-3 flex justify-end">
-                    <button 
-                      className={`text-sm px-3 py-1 rounded ${
-                        selectedResponse === response.modelId 
-                          ? 'bg-blue-600 text-white' 
-                          : 'bg-gray-100 text-gray-700'
-                      }`}
-                    >
-                      {useVerifier ? 'Verify' : 'Select'}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+            )}
+            models={models}
+            collapsedResponses={collapsedResponses}
+            toggleCollapse={toggleCollapse}
+          />
         </div>
         
         {/* Selected response or verification */}
@@ -163,7 +144,7 @@ const AIModelResponseUI = () => {
             </h2>
             
             {useVerifier ? (
-              <div className="bg-green-50 border border-green-200 rounded p-3">
+              <div className="bg-green-50 border border-green-200 p-3 rounded">
                 <div className="flex items-center mb-2">
                   <div className="h-4 w-4 rounded-full bg-green-500 mr-2"></div>
                   <span className="font-medium text-green-800">Verified as accurate</span>
@@ -174,7 +155,7 @@ const AIModelResponseUI = () => {
                 </p>
               </div>
             ) : (
-              <div>
+              <div className="border rounded p-3">
                 <p className="text-gray-700">
                   {responses.find(r => r.modelId === selectedResponse)?.text}
                 </p>
